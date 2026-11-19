@@ -5,7 +5,8 @@
 #
 #   <git>/sagara-sangama/sagara-sangama/      the aggregator
 #   <git>/sagara-sangama/atlases/gretil-atlas/
-#   <git>/seti/                               SETI (master lives in data/)
+#   <git>/panditya/seti/                      SETI, its own repo (master in data/)
+#   <git>/panditya/panditya/                  Pāṇḍitya (not read here)
 #   <git>/ocean-registration-progress-dashboard/   this repo
 #
 # Edit these if your folders sit elsewhere. Every path can also be given on
@@ -20,7 +21,7 @@ search_json = "../sagara-sangama/sagara-sangama/docs/data/search.json"
 
 # The SETI master. One row per registered e-text, with up to three links and
 # the Pandit work and author IDs. The source for what has moved right.
-seti_master = "../seti/data/seti-master.csv"
+seti_master = "../panditya/seti/data/seti-master.csv"
 
 # GRETIL Atlas tree.json. Optional. Its works list every file of an item, and
 # SETI's GRETIL rows point at legacy .htm paths that may not be the one the

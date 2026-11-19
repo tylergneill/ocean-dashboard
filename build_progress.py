@@ -249,9 +249,12 @@ def build(search_path, seti_path, gretil_path):
     for c in COLLECTIONS:
         items = []
         for it in index["items"]:
-            # Text-bearing items only: 'lt' set and not PDF-only ('po'). These
-            # totals are each Atlas's published text_count.
-            if it["a"] != c["code"] or not it.get("lt") or it.get("po"):
+            # Text-bearing items only: everything not flagged PDF-only ('po').
+            # That gives exactly each Atlas's published text_count (the index's
+            # own `reconciles` check is indexed - pdf_only == text_count).
+            # Don't also require 'lt': it marks a local-text link, which some
+            # text-bearing items lack (all of GRETIL, ~100 Wikisource pages).
+            if it["a"] != c["code"] or it.get("po"):
                 continue
             flags = 0
             for k in item_keys(it, gretil_files):
