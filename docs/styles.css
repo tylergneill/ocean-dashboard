@@ -36,10 +36,11 @@ h1 { margin: 0 0 4px; font-size: 1.5rem; }
 .sub { margin: 0 0 18px; color: var(--muted); }
 
 /* Tabs: one per collection plus All. The active tab is underlined in its
-   collection's colour (--c, set inline by app.js). */
+   collection's colour (--c, set inline by app.js). All has no collection, so
+   it takes the text colour: the gold accent is too close to GRETIL's gold. */
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); }
 .tabs button {
-  --c: var(--accent);
+  --c: var(--text);
   border: 0; background: none; color: var(--muted); font: inherit;
   padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent;
 }

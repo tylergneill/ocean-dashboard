@@ -63,10 +63,11 @@ NO_AUTHOR = "—"    # SETI: the text has no author
 # Wikisource, Sanskrit Documents and E-bhāratīsampat take the exact hex values
 # of Sāgarasaṅgama's growth chart and search page (docs/growth.js,
 # docs/search.js) so a collection keeps its colour across the projects.
-# GRETIL and Jain Quantum have no colour there yet; the two below are
-# placeholders in the same lightness band, to be replaced by whatever
-# Sāgarasaṅgama settles on. `seti` is the Collection value SETI uses for it,
-# where SETI has one.
+# GRETIL and Jain Quantum take the colours from Sāgarasaṅgama's
+# add-gretil-and-jain-2 branch (growth.js), which is not yet on its main; the
+# placeholder_colour flag marks them until it is. Drop the flag, and recheck
+# the hexes, once main carries them. `seti` is the Collection value SETI uses
+# for it, where SETI has one.
 COLLECTIONS = [
     {"code": "w", "name": "Sanskrit Wikisource", "site": "sa.wikisource.org",
      "light": "#2a78d6", "dark": "#3987e5", "seti": None},
@@ -75,9 +76,9 @@ COLLECTIONS = [
     {"code": "e", "name": "E-bhāratīsampat", "site": "ebharatisampat.in",
      "light": "#eb6834", "dark": "#d95926", "seti": None},
     {"code": "g", "name": "GRETIL", "site": "gretil.sub.uni-goettingen.de",
-     "light": "#b5487f", "dark": "#cc5a93", "seti": "GRETIL", "placeholder_colour": True},
+     "light": "#c9a227", "dark": "#d4ad2f", "seti": "GRETIL", "placeholder_colour": True},
     {"code": "j", "name": "Jain Quantum", "site": "jainqq.org",
-     "light": "#8a63c9", "dark": "#9a76d6", "seti": None, "placeholder_colour": True},
+     "light": "#8e5bd6", "dark": "#9b6ee0", "seti": None, "placeholder_colour": True},
 ]
 
 # Sanskrit Documents serves one document under several stems: the .html page
@@ -88,6 +89,11 @@ SD_SUFFIXES = sorted(
     {".html", ".htm", ".itx", ".pdf", "-ta.pdf", "-te.pdf", "-kn.pdf", "-gu.pdf",
      "-bn.pdf", "-or.pdf", "-ml.pdf", "-pa.pdf", "-as.pdf", "-sa.pdf"},
     key=len, reverse=True)
+
+# Where a GRETIL file can be linked: Göttingen itself (SETI's rows) and the
+# mirror Sāgarasaṅgama's search page links to (tylergneill.github.io/
+# gretil-mirror/gretil/...). Both put the corpus path after "/gretil/".
+GRETIL_HOSTS = {"gretil.sub.uni-goettingen.de", "tylergneill.github.io"}
 
 
 # ---------------------------------------------------------------- link keys
@@ -129,7 +135,14 @@ def site_keys(url):
         return {"sd:" + path.lstrip("/")}
 
     if host.endswith("wikisource.org"):
-        # MediaWiki treats spaces and underscores in a title as the same.
+        # MediaWiki treats spaces and underscores in a title as the same. The
+        # Atlas stores sa.wikisource.org/wiki/<Title>; the mobile host
+        # (sa.m.wikisource.org) and /w/index.php?title=<Title> are the same page.
+        host = host.replace(".m.wikisource.org", ".wikisource.org")
+        if path == "/w/index.php":
+            title = urllib.parse.parse_qs(query).get("title")
+            if title:
+                path = "/wiki/" + title[0]
         return {"ws:" + host + path.replace(" ", "_")}
 
     if host.endswith("ebharatisampat.in"):
@@ -143,12 +156,28 @@ def site_keys(url):
             keys.add("ebs-book:" + v)
         return keys
 
-    if host.endswith("uni-goettingen.de") and "/gretil/" in path:
+    if host in GRETIL_HOSTS and "/gretil/" in path:
         # Everything after /gretil/ is the file's path in the corpus, which is
-        # what the GRETIL Atlas's ids and tree files are.
+        # what the GRETIL Atlas's ids and tree files are. The same path on
+        # Göttingen's site and on the mirror Sāgarasaṅgama links to is one file.
         return {"gretil:" + path.split("/gretil/", 1)[1]}
 
+    if host == "jainqq.org":
+        # Jain Quantum keys a book by its six-digit serial (sr_no): the Atlas
+        # links /explore/<srno>/1 (page viewer, any page number) and
+        # /booktext/<title slug>/<srno> (the OCR text). Leading zeros are
+        # dropped so "1014" and "001014" agree.
+        m = (re.fullmatch(r"/explore/(\d+)(?:/\d+)?", path)
+             or re.fullmatch(r"/booktext/[^/]+/(\d+)", path))
+        if m:
+            return {"jq:" + jq_serial(m.group(1))}
+
     return {"url:" + host + path + ("?" + query if query else "")}
+
+
+def jq_serial(s):
+    """A Jain Quantum serial without its zero padding ("001014" → "1014")."""
+    return s.lstrip("0") or "0"
 
 
 def ebs_reader_id(serial):
@@ -184,10 +213,9 @@ def item_keys(it, gretil_files):
         # The index carries one path per item; the tree lists all its files,
         # and SETI may point at any of them (often a legacy .htm).
         return {"gretil:" + f for f in gretil_files.get(i, [i])}
-    # Jain Quantum: no link rule yet, and SETI has no rows for it. The key
-    # below cannot match anything; it is here so the item still counts in the
-    # heap. Add the rule when SETI starts registering Jain Quantum texts.
-    return {f"{a}:{i}"}
+    if a == "j":
+        return {"jq:" + jq_serial(i)}
+    return {f"{a}:{i}"}   # an Atlas with no rule here: counts, never matches
 
 
 # ---------------------------------------------------------------- SETI

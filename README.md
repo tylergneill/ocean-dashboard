@@ -12,6 +12,7 @@ registered. This repo reads what they publish and draws the gap.
 ```
 make data    # read the sibling repos, write docs/data/progress.json
 make serve   # http://localhost:8765
+make test    # link-rule tests (python3 -m unittest)
 ```
 
 Paths to the inputs are in `config.toml`, relative to this repo. Python 3.11+,
@@ -39,14 +40,16 @@ never by title. The per-site link rules are in `site_keys()` and
 - **Sanskrit Documents:** the document id, whatever the stem (`.html`,
   `.itx`, `-sa.pdf` and the other downloads).
 - **Sanskrit Wikisource:** the page URL, percent-decoded, spaces as
-  underscores.
+  underscores; the mobile host and `/w/index.php?title=` give the same key.
 - **E-bhāratīsampat:** either the Atlas's `readSearch.php?id=` or the
-  readers' `bookid=`.
-- **GRETIL:** the path after `/gretil/`. The search index carries one path
-  per item (often the new `corpustei/` one) while SETI points at legacy
+  readers' `bookid=` (`readbook3`, `read_chapter`, `ebook_pdf`).
+- **GRETIL:** the path after `/gretil/`, on Göttingen's site or the mirror.
+  The search index carries one path per item (often the new `corpustei/`
+  one) while SETI points at legacy
   `1_sanskr/….htm` files, so the GRETIL tree.json, which lists all of an
   item's files, is needed for a full match.
-- **Jain Quantum:** no rule yet; SETI has no rows for it.
+- **Jain Quantum:** the serial (`sr_no`), from jainqq.org's `/explore/<srno>/<page>`
+  or `/booktext/<title>/<srno>`, leading zeros ignored.
 
 Being in SETI moves a text to the right. The **Done means** toggle then
 decides which of those are solid and which are faint:
@@ -63,7 +66,8 @@ decides which of those are solid and which are faint:
 
 - One tab per collection, plus All. Collection colours are Sāgarasaṅgama's
   for Wikisource, Sanskrit Documents and E-bhāratīsampat. GRETIL and Jain
-  Quantum have placeholder colours until Sāgarasaṅgama picks theirs.
+  Quantum use the colours from Sāgarasaṅgama's unmerged
+  `add-gretil-and-jain-2` branch until its main carries them.
 - Two heaps of grains: not yet in SETI on the left, in SETI on the right.
   On load the registered grains lift off the left heap and arc across.
   Click the heaps to replay.
