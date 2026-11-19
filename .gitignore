@@ -1,0 +1,4 @@
+# Built locally from the sibling repos by `make data`. Not committed in v0:
+# it reflects whatever state those repos are in on this machine.
+docs/data/
+__pycache__/

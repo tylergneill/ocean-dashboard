@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ocean registration progress</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Sāgarasaṅgama → SETI</h1>
+    <p class="sub">How much of each collection has been registered in SETI. Every grain on the left is
+      waiting; every grain on the right has a SETI record.</p>
+  </header>
+
+  <nav id="tabs" class="tabs" role="tablist"></nav>
+
+  <section class="controls">
+    <div class="seg" id="level" role="radiogroup" aria-label="What counts as done">
+      <span class="seg-label">Done means</span>
+      <button data-level="record" aria-pressed="true">Record</button>
+      <button data-level="work">+ Work</button>
+      <button data-level="author">+ Author</button>
+      <button data-level="both">+ Work &amp; author</button>
+      <button disabled title="Not in the SETI master yet">Author detail</button>
+    </div>
+    <div class="seg" id="unit" role="radiogroup" aria-label="Measure">
+      <span class="seg-label">Measure</span>
+      <button data-unit="texts" aria-pressed="true">Texts</button>
+      <button data-unit="bytes">MB</button>
+    </div>
+  </section>
+
+  <section class="field">
+    <canvas id="heaps" aria-label="Two heaps of grains: not yet registered on the left, registered on the right"></canvas>
+    <div class="heap-labels">
+      <span>Not yet in SETI</span>
+      <span>In SETI</span>
+    </div>
+    <p class="grain-note" id="grain-note"></p>
+  </section>
+
+  <section id="bars" class="bars"></section>
+
+  <footer id="footer"></footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

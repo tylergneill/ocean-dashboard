@@ -1,0 +1,28 @@
+# Where the inputs live, relative to this repo's root (or absolute).
+#
+# The defaults assume this repo sits in the same folder as the others, laid
+# out the way SETI's scripts/atlas_works.py expects:
+#
+#   <git>/sagara-sangama/sagara-sangama/      the aggregator
+#   <git>/sagara-sangama/atlases/gretil-atlas/
+#   <git>/seti/                               SETI (master lives in data/)
+#   <git>/ocean-registration-progress-dashboard/   this repo
+#
+# Edit these if your folders sit elsewhere. Every path can also be given on
+# the command line (python3 build_progress.py --help).
+
+[inputs]
+
+# Sāgarasaṅgama's published search index: every item of every Atlas, with its
+# id, title, size and whether it bears text. The one source for the left-hand
+# heap.
+search_json = "../sagara-sangama/sagara-sangama/docs/data/search.json"
+
+# The SETI master. One row per registered e-text, with up to three links and
+# the Pandit work and author IDs. The source for what has moved right.
+seti_master = "../seti/data/seti-master.csv"
+
+# GRETIL Atlas tree.json. Optional. Its works list every file of an item, and
+# SETI's GRETIL rows point at legacy .htm paths that may not be the one the
+# search index carries. Without it, GRETIL matching uses the index's id only.
+gretil_tree = "../sagara-sangama/atlases/gretil-atlas/docs/data/tree.json"
