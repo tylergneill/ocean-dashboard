@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from build_progress import ebs_reader_id, item_keys, site_keys
+from build_progress import ebs_reader_id, item_keys, item_parts, site_keys
 
 
 class LinkKeys(unittest.TestCase):
@@ -81,7 +81,7 @@ class LinkKeys(unittest.TestCase):
             "https://tylergneill.github.io/gretil-mirror/gretil/1_sanskr/6_sastra/3_phil/yoga/yogasutu.htm",
         ], gretil_files={f: files for f in files})
 
-    def test_jain_quantum(self):
+    def test_jain_elibrary(self):
         # Panchsangrah, sr_no 001014: viewer at any page, and the text page.
         item = {"a": "j", "i": "001014"}
         self.assertLinksMatch(item, [
@@ -99,6 +99,45 @@ class LinkKeys(unittest.TestCase):
                          & item_keys({"a": "d", "i": "doc_deities_misc/svAmIsamarthasahasranAmastotramarAThI"}, {}))
         self.assertEqual(site_keys("https://tylergneill.github.io/gretil-atlas/"),
                          {"url:tylergneill.github.io/gretil-atlas"})
+
+
+
+class GretilParts(unittest.TestCase):
+    """A GRETIL text counts over its legacy main files, not as all or nothing."""
+
+    FILES = ["corpustei/sa_mahAbhArata.xml",
+             "1_sanskr/2_epic/mbh/mbh_01_u.htm",
+             "1_sanskr/2_epic/mbh/mbh_02_u.htm",
+             "1_sanskr/2_epic/mbh/mbh_03_u.htm",
+             "1_sanskr/2_epic/mbh/ext/bhgce__u.htm"]
+    KINDS = {FILES[1]: "main", FILES[2]: "main", FILES[3]: "main", FILES[4]: "version"}
+
+    def parts(self):
+        item = {"a": "g", "i": self.FILES[1]}
+        return item_parts(item, {f: self.FILES for f in self.FILES}, self.KINDS)
+
+    def registered(self, links):
+        keys = set().union(*(site_keys(l) for l in links))
+        return [bool(p & keys) for p in self.parts()]
+
+    def test_one_part_per_main_file(self):
+        self.assertEqual(len(self.parts()), 3)
+
+    def test_share_of_mains(self):
+        base = "http://gretil.sub.uni-goettingen.de/gretil/"
+        self.assertEqual(self.registered([base + self.FILES[1], base + self.FILES[2]]),
+                         [True, True, False])
+
+    def test_version_file_moves_nothing(self):
+        base = "http://gretil.sub.uni-goettingen.de/gretil/"
+        self.assertEqual(self.registered([base + self.FILES[4]]), [False, False, False])
+
+    def test_tei_file_registers_whole(self):
+        base = "http://gretil.sub.uni-goettingen.de/gretil/"
+        self.assertEqual(self.registered([base + self.FILES[0]]), [True, True, True])
+
+    def test_other_collections_one_part(self):
+        self.assertEqual(len(item_parts({"a": "j", "i": "001014"}, {}, {})), 1)
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ and the page looks right in a browser.
   Texts / MB switch, and bars with exact numbers.
 - Tested only in node with a stubbed DOM. **Never seen in a real browser.**
 - Run against the public sagara-sangama index (three Atlases) plus GRETIL
-  and Jain Quantum items taken from SETI's
+  and Jain eLibrary items taken from SETI's
   `reports/2026-10-13-atlas-works-items.csv`: GRETIL matched 290 of 1,123
   items; the other four collections have no SETI rows yet, so zero.
 
@@ -56,7 +56,7 @@ Find where the repos actually are, set relative paths, and confirm
 
 The public sagara-sangama `search.json` has only Wikisource, Sanskrit
 Documents and E-bhāratīsampat. Tyler's local one should also have GRETIL
-(`a: "g"`) and Jain Quantum (`a: "j"`). Confirm `make data` prints all five.
+(`a: "g"`) and Jain eLibrary (`a: "j"`). Confirm `make data` prints all five.
 If the local index still has three, stop and report: don't build the other
 two from the Atlases' own trees without asking.
 
@@ -92,7 +92,7 @@ the rules in `item_keys()` / `site_keys()` agree:
   five-round base64 of the serial `s`; `ebs_reader_id()` mirrors
   `ebReaderId()` in sagara-sangama's `search.js`). Check the encoding against
   one real book.
-- **Jain Quantum (jainqq.org):** no rule yet. Find how the Atlas links an
+- **Jain eLibrary (jainqq.org):** no rule yet. Find how the Atlas links an
   item to jainqq.org and add the rule, so that the first SETI row Tyler adds
   for it will match.
 
@@ -103,7 +103,7 @@ that must give the same key. A `tests/` file run with
 ### 5. Colours
 
 Wikisource, Sanskrit Documents and E-bhāratīsampat use sagara-sangama's
-hex values. GRETIL and Jain Quantum have placeholders in `COLLECTIONS`
+hex values. GRETIL and Jain eLibrary have placeholders in `COLLECTIONS`
 (`placeholder_colour: True`). If Tyler's local sagara-sangama
 (`docs/growth.js` / `docs/search.js`) has colours for them, copy those and
 drop the placeholder flag. If not, leave the placeholders.

@@ -48,8 +48,15 @@ never by title. The per-site link rules are in `site_keys()` and
   one) while SETI points at legacy
   `1_sanskr/….htm` files, so the GRETIL tree.json, which lists all of an
   item's files, is needed for a full match.
-- **Jain Quantum:** the serial (`sr_no`), from jainqq.org's `/explore/<srno>/<page>`
+- **Jain eLibrary:** the serial (`sr_no`), from jainqq.org's `/explore/<srno>/<page>`
   or `/booktext/<title>/<srno>`, leading zeros ignored.
+
+A text is what its Atlas says it is: one Atlas item, so the totals are each
+Atlas's published text count. A GRETIL text split over several legacy files
+(the Mahābhārata's eighteen parvans) counts in shares: each main file SETI
+registers moves its share of the text, and of its bytes. A SETI row on a
+GRETIL TEI file registers the whole text. A row on a version file (another
+rendering, not a further part) moves nothing; the footer counts those.
 
 Being in SETI moves a text to the right. The **Done means** toggle then
 decides which of those are solid and which are faint:
@@ -65,8 +72,8 @@ decides which of those are solid and which are faint:
 ## The page
 
 - One tab per collection, plus All. Collection colours are Sāgarasaṅgama's
-  for Wikisource, Sanskrit Documents and E-bhāratīsampat. GRETIL and Jain
-  Quantum use the colours from Sāgarasaṅgama's unmerged
+  for Wikisource, Sanskrit Documents and E-bhāratīsampat. GRETIL and Jain eLibrary
+  use the colours from Sāgarasaṅgama's unmerged
   `add-gretil-and-jain-2` branch until its main carries them.
 - Two heaps of grains: not yet in SETI on the left, in SETI on the right.
   On load the registered grains lift off the left heap and arc across.

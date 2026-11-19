@@ -49,14 +49,26 @@ const nf = new Intl.NumberFormat("en-US");
  * ------------------------------------------------------------------ */
 
 /* Split one collection's items into the three parts, for the current level,
-   in both measures at once. Items are [bytes, flags] pairs. */
+   in both measures at once. Items are [bytes, parts] pairs, parts being the
+   flags of each part of the text (one part for most; a GRETIL text split over
+   several files has one per file). A text counts in shares: 12 of 18 parts in
+   SETI puts 12/18 of it, and of its bytes, on the right. So the text totals
+   can be fractional; they are rounded for display. */
 function tally(coll, level) {
   const need = LEVELS[level];
   const t = { done: [0, 0], partial: [0, 0], left: [0, 0] };   // [texts, bytes]
-  for (const [b, f] of coll.items) {
-    const part = (f & need) === need ? "done" : (f & RECORD) ? "partial" : "left";
-    t[part][0] += 1;
-    t[part][1] += b;
+  for (const [b, parts] of coll.items) {
+    let done = 0, rec = 0;
+    for (const f of parts) {
+      if ((f & need) === need) done += 1;
+      if (f & RECORD) rec += 1;
+    }
+    const n = parts.length;
+    const shares = { done: done / n, partial: (rec - done) / n, left: 1 - rec / n };
+    for (const k in shares) {
+      t[k][0] += shares[k];
+      t[k][1] += shares[k] * b;
+    }
   }
   return t;
 }
@@ -218,7 +230,7 @@ function pct(a, b) {
 /* One labelled bar. `t` is a tally, `m` 0 for texts or 1 for bytes. */
 function barRow(title, colour, t, m) {
   const total = t.done[m] + t.partial[m] + t.left[m];
-  const fmt = m ? fmtMB : (n) => nf.format(n);
+  const fmt = m ? fmtMB : (n) => nf.format(Math.round(n));
   const row = document.createElement("div");
   row.className = "bar-row";
   row.style.setProperty("--c", colour);
@@ -296,10 +308,14 @@ function footer() {
     .filter(([, n]) => n > 0)
     .map(([name, n]) => `${nf.format(n)} SETI ${name} rows match no Atlas item.`)
     .join(" ");
+  const versionOnly = Object.entries(d.seti_rows_version_only || {})
+    .filter(([, n]) => n > 0)
+    .map(([name, n]) => `${nf.format(n)} more link only a ${name} version file, which doesn't count.`)
+    .join(" ");
   document.getElementById("footer").innerHTML =
     `Built ${d.generated.slice(0, 10)} from the search index of ` +
     `${(d.inputs.search_json.generated || "?").slice(0, 10)} and ` +
-    `${nf.format(d.inputs.seti_master.rows)} SETI rows. ${unmatched}`;
+    `${nf.format(d.inputs.seti_master.rows)} SETI rows. ${unmatched} ${versionOnly}`;
 }
 
 async function main() {

@@ -9,7 +9,7 @@ What it reads (read-only, nothing else):
   * The SETI master, data/seti-master.csv. One row per registered e-text, with
     up to three links and the Pandit work and author IDs.
   * Optionally the GRETIL Atlas tree.json, which lists every file of a GRETIL
-    item (see match_gretil below for why that matters).
+    item and what kind each is (see item_parts below for why that matters).
 
 It follows the same rule Sāgarasaṅgama's CONTRACT.md sets for itself: read only
 what a sibling repo publishes, never its working files.
@@ -29,9 +29,18 @@ What it decides, per text-bearing item:
     These are bit flags, not a ladder: a row can know its author but not its
     work. The page's toggle picks which flags count as done.
 
+  * Over how many parts? A text is what its Atlas says it is (one search-index
+    item, so the totals are each Atlas's published text_count). Most are one
+    part, registered or not. A GRETIL text can be several legacy files (the
+    Mahābhārata is eighteen), and SETI registers files, so such a text counts
+    as the share of its main files that SETI has: 12 of 18 parvans registered
+    moves 12/18 of the Mahābhārata, in texts and in bytes. Crediting the whole
+    text for any one file made GRETIL read ~95%.
+
 What it writes: one JSON file the page reads. Each collection carries its
-items as compact [bytes, flags] pairs so the page can redraw the heaps for any
-toggle setting without another build. No titles, to keep the file small.
+items as compact [bytes, [flags of each part]] pairs so the page can redraw
+the heaps for any toggle setting without another build. No titles, to keep the
+file small.
 
 Standard library only. Python 3.11+ (for tomllib).
 
@@ -63,7 +72,7 @@ NO_AUTHOR = "—"    # SETI: the text has no author
 # Wikisource, Sanskrit Documents and E-bhāratīsampat take the exact hex values
 # of Sāgarasaṅgama's growth chart and search page (docs/growth.js,
 # docs/search.js) so a collection keeps its colour across the projects.
-# GRETIL and Jain Quantum take the colours from Sāgarasaṅgama's
+# GRETIL and Jain eLibrary take the colours from Sāgarasaṅgama's
 # add-gretil-and-jain-2 branch (growth.js), which is not yet on its main; the
 # placeholder_colour flag marks them until it is. Drop the flag, and recheck
 # the hexes, once main carries them. `seti` is the Collection value SETI uses
@@ -77,7 +86,7 @@ COLLECTIONS = [
      "light": "#eb6834", "dark": "#d95926", "seti": None},
     {"code": "g", "name": "GRETIL", "site": "gretil.sub.uni-goettingen.de",
      "light": "#c9a227", "dark": "#d4ad2f", "seti": "GRETIL", "placeholder_colour": True},
-    {"code": "j", "name": "Jain Quantum", "site": "jainqq.org",
+    {"code": "j", "name": "Jain eLibrary", "site": "jainqq.org",
      "light": "#8e5bd6", "dark": "#9b6ee0", "seti": None, "placeholder_colour": True},
 ]
 
@@ -163,7 +172,7 @@ def site_keys(url):
         return {"gretil:" + path.split("/gretil/", 1)[1]}
 
     if host == "jainqq.org":
-        # Jain Quantum keys a book by its six-digit serial (sr_no): the Atlas
+        # Jain eLibrary (jainqq.org) keys a book by its six-digit serial (sr_no): the Atlas
         # links /explore/<srno>/1 (page viewer, any page number) and
         # /booktext/<title slug>/<srno> (the OCR text). Leading zeros are
         # dropped so "1014" and "001014" agree.
@@ -176,7 +185,7 @@ def site_keys(url):
 
 
 def jq_serial(s):
-    """A Jain Quantum serial without its zero padding ("001014" → "1014")."""
+    """A Jain eLibrary serial without its zero padding ("001014" → "1014")."""
     return s.lstrip("0") or "0"
 
 
@@ -253,16 +262,44 @@ def load_seti(path):
 
 
 def load_gretil_files(path):
-    """GRETIL item id → every file path the tree lists for it, or {} if absent."""
+    """Two maps from the GRETIL Atlas tree.json, or ({}, {}) if it is absent.
+
+    files: any file path of an item → every file path the tree lists for it.
+    kinds: file path → the tree's file_kinds entry ("main", "version" or
+           "index"). Only legacy .htm files have one; TEI files have none."""
     if not path or not Path(path).exists():
-        return {}
+        return {}, {}
     tree = json.loads(Path(path).read_text(encoding="utf-8"))
-    out = {}
+    files_of, kinds = {}, {}
     for w in tree.get("works", []):
         files = w.get("files") or []
         for f in files:
-            out[f] = files
-    return out
+            files_of[f] = files
+        kinds.update(w.get("file_kinds") or {})
+    return files_of, kinds
+
+
+def item_parts(it, gretil_files, gretil_kinds):
+    """The parts an item's registration is measured over: a list of key sets.
+
+    Every collection but GRETIL: one part, the item's own keys.
+
+    GRETIL, with the tree: one part per legacy *main* file, since that is what
+    SETI registers. Version and index files are left out: a version is another
+    rendering of the same text, not a further part of it, so a SETI row on one
+    does not register the item's main text. A TEI file (corpustei/...) stands
+    for the whole item, so its keys go into every part: a SETI row on it
+    registers all of them. An item with no legacy main file (born TEI) is one
+    part made of its TEI files."""
+    if it["a"] == "g" and it.get("i") in gretil_files:
+        files = gretil_files[it["i"]]
+        whole = {"gretil:" + f for f in files if f.startswith("corpustei/")}
+        mains = [f for f in files if gretil_kinds.get(f) == "main"]
+        if mains:
+            return [{"gretil:" + f} | whole for f in mains]
+        if whole:
+            return [whole]
+    return [item_keys(it, gretil_files)]
 
 
 # ---------------------------------------------------------------- build
@@ -270,9 +307,10 @@ def load_gretil_files(path):
 def build(search_path, seti_path, gretil_path):
     index = json.loads(Path(search_path).read_text(encoding="utf-8"))
     seti_by_key, seti_rows = load_seti(seti_path)
-    gretil_files = load_gretil_files(gretil_path)
+    gretil_files, gretil_kinds = load_gretil_files(gretil_path)
 
-    matched_keys = set()
+    seen_keys = set()      # keys of any file of any item SETI links to
+    counted_keys = set()   # keys that count toward an item's progress
     collections = []
     for c in COLLECTIONS:
         items = []
@@ -284,12 +322,15 @@ def build(search_path, seti_path, gretil_path):
             # text-bearing items lack (all of GRETIL, ~100 Wikisource pages).
             if it["a"] != c["code"] or it.get("po"):
                 continue
-            flags = 0
-            for k in item_keys(it, gretil_files):
-                if k in seti_by_key:
+            seen_keys |= item_keys(it, gretil_files) & seti_by_key.keys()
+            parts = []
+            for keys in item_parts(it, gretil_files, gretil_kinds):
+                flags = 0
+                for k in keys & seti_by_key.keys():
                     flags |= seti_by_key[k]
-                    matched_keys.add(k)
-            items.append([int(it.get("b") or 0), flags])
+                    counted_keys.add(k)
+                parts.append(flags)
+            items.append([int(it.get("b") or 0), parts])
         if not items:
             continue   # not in this copy of the index (the public one has three Atlases)
         # Biggest first, so the heaps settle with the big texts at the bottom.
@@ -298,14 +339,17 @@ def build(search_path, seti_path, gretil_path):
         out.update(texts=len(items), bytes=sum(b for b, _ in items), items=items)
         collections.append(out)
 
-    # SETI rows for these collections whose links matched nothing: either a
-    # link rule is missing here, or the row points at a page the Atlas lacks.
-    unmatched = {}
+    # SETI rows for these collections that move nothing: either they link
+    # nothing the Atlas has (a link rule missing here, or a page the Atlas
+    # lacks), or only a file that doesn't count (a GRETIL version file).
+    unmatched, uncounted = {}, {}
     for c in COLLECTIONS:
         if not c["seti"]:
             continue
         rows = [r for r in seti_rows if r.get("Collection") == c["seti"]]
-        unmatched[c["name"]] = sum(1 for r in rows if not (r["_keys"] & matched_keys))
+        unmatched[c["name"]] = sum(1 for r in rows if not (r["_keys"] & seen_keys))
+        uncounted[c["name"]] = sum(1 for r in rows
+                                   if r["_keys"] & seen_keys and not (r["_keys"] & counted_keys))
 
     return {
         "generated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
@@ -316,8 +360,14 @@ def build(search_path, seti_path, gretil_path):
         },
         "flags": {"record": RECORD, "work": WORK, "author": AUTHOR},
         "seti_rows_unmatched": unmatched,
+        "seti_rows_version_only": uncounted,
         "collections": collections,
     }
+
+
+def share(parts, need):
+    """Fraction of an item's parts whose flags include every bit of `need`."""
+    return sum(1 for f in parts if f & need == need) / len(parts)
 
 
 def main():
@@ -349,15 +399,18 @@ def main():
     print(f"  {'collection':22s} {'texts':>7s} {'in SETI':>8s} {'+work':>7s} {'+author':>8s}   MB moved")
     for c in data["collections"]:
         its = c["items"]
-        rec = [x for x in its if x[1] & RECORD]
-        mb = sum(b for b, _ in rec) / 1e6
-        print(f"  {c['name']:22s} {c['texts']:7d} {len(rec):8d} "
-              f"{sum(1 for x in its if x[1] & WORK):7d} {sum(1 for x in its if x[1] & AUTHOR):8d}"
+        rec = sum(share(p, RECORD) for _, p in its)
+        mb = sum(b * share(p, RECORD) for b, p in its) / 1e6
+        print(f"  {c['name']:22s} {c['texts']:7d} {rec:8.1f} "
+              f"{sum(share(p, RECORD | WORK) for _, p in its):7.1f} "
+              f"{sum(share(p, RECORD | AUTHOR) for _, p in its):8.1f}"
               f"   {mb:,.1f} of {c['bytes'] / 1e6:,.1f}")
     for name, n in data["seti_rows_unmatched"].items():
         if n:
             print(f"  {n} SETI {name} rows matched no Atlas item")
-
+    for name, n in data["seti_rows_version_only"].items():
+        if n:
+            print(f"  {n} SETI {name} rows link only a version file, so move nothing")
 
 if __name__ == "__main__":
     main()
