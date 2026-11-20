@@ -3,17 +3,17 @@
    Reads data/progress.json (written by build_progress.py) and draws, for the
    chosen tab:
 
-     * two heaps of grains on a canvas. The left heap is the collection as it
-       stands outside SETI; the right heap is everything with a SETI record.
-       On load and on every tab or unit change, the registered grains are
-       lifted off the top of the full heap and arc across to the right, so the
-       picture is literally earth being moved.
+     * a pool and a vessel on a canvas. The pool on the left is the collection
+       as it stands outside SETI; the vessel on the right holds everything with
+       a SETI record. On load and on every tab or unit change, the registered
+       share is drawn up out of the pool as drops that arc across and fall into
+       the vessel, filling it in a layer per collection.
      * a bar per measure (or per collection, on the All tab) with the same
        three parts: done, recorded-but-not-done, not in SETI.
 
    "Done" is the toggle. A text with any SETI record always moves right (the
-   most permissive reading); the toggle decides which of those grains are
-   solid (done at that level) and which are faint (a record, but missing the
+   most permissive reading); the toggle decides which of that water is solid
+   colour (done at that level) and which is faint (a record, but missing the
    work or author ID the level asks for).
 
    No libraries, no build step. Open it through `make serve` (a browser will
@@ -34,10 +34,10 @@ const LEVELS = {
   both: RECORD | WORK | AUTHOR,
 };
 
-/* At most this many grains on the canvas. Past it, one grain stands for
-   several texts (or a larger slice of MB), and the note under the heaps says
-   how many. Keeps the animation smooth on a phone. */
-const MAX_GRAINS = 5000;
+/* At most this many drops for a whole collection. Past it, one drop stands
+   for several texts (or a larger slice of MB), and the note under the canvas
+   says how many. Keeps the stream legible and the animation smooth. */
+const MAX_DROPS = 400;
 
 const state = { data: null, tab: "all", level: "record", unit: "texts" };
 const dark = window.matchMedia("(prefers-color-scheme: dark)");
@@ -83,44 +83,23 @@ function shownCollections() {
 }
 
 /* ------------------------------------------------------------------ *
- * Heaps
+ * Water
  * ------------------------------------------------------------------ */
 
-/* Grain positions for a mound of n grains, bottom row first, in grain units
-   relative to the mound's centre-bottom. Rows narrow by two grains each level,
-   so the outline is a triangle about twice as wide as it is tall. `base`
-   fixes the bottom row's width; left out, it is chosen to suit n. */
-function mound(n, base) {
-  if (base == null) base = Math.max(1, Math.ceil(2 * Math.sqrt(n)));
-  const pts = [];
-  let row = 0, width = base;
-  while (pts.length < n) {
-    const w = Math.max(1, width);
-    const inRow = Math.min(w, n - pts.length);
-    // Centre the row; offset odd rows by half a grain so it reads as a pile
-    // of stacked grains rather than a grid.
-    const x0 = -inRow / 2 + (row % 2 ? 0.25 : -0.25);
-    for (let i = 0; i < inRow; i++) pts.push([x0 + i + 0.5, row]);
-    row += 1;
-    width -= 2;
-  }
-  return pts;
-}
-
-/* The grain counts for the current tab and measure.
+/* The drop counts for the current tab and measure.
 
    Returns { left, right: [{colour, solid, n}], unit } where unit is how much
-   one grain stands for (texts or bytes). Right-hand segments come in drawing
-   order, bottom first: done grains settle at the bottom of the new heap, the
-   not-yet-done ones lie loose on top. */
-function grains() {
+   one drop stands for (texts or bytes). Right-hand segments come in filling
+   order, bottom first: done water settles at the bottom of the vessel, the
+   not-yet-done layers float faint on top. */
+function drops() {
   const m = state.unit === "texts" ? 0 : 1;
   const colls = shownCollections();
   const parts = colls.map((c) => ({ c, t: tally(c, state.level) }));
   const total = parts.reduce((s, p) => s + p.t.done[m] + p.t.partial[m] + p.t.left[m], 0);
-  const unit = Math.max(1, total / MAX_GRAINS);
+  const unit = Math.max(1, total / MAX_DROPS);
 
-  // A part with something in it gets at least one grain, so the first text
+  // A part with something in it gets at least one drop, so the first text
   // registered in a big collection is visible. Slightly flatters tiny
   // fractions; the bars below are exact.
   const g = (v) => (v > 0 ? Math.max(1, Math.round(v / unit)) : 0);
@@ -132,10 +111,28 @@ function grains() {
   return { left, right, unit };
 }
 
+/* A basin's outline: open at the top, rounded at the bottom corners. */
+function basinPath(ctx, b) {
+  const r = Math.min(14, b.w / 4, b.h / 4);
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y);
+  ctx.lineTo(b.x, b.y + b.h - r);
+  ctx.quadraticCurveTo(b.x, b.y + b.h, b.x + r, b.y + b.h);
+  ctx.lineTo(b.x + b.w - r, b.y + b.h);
+  ctx.quadraticCurveTo(b.x + b.w, b.y + b.h, b.x + b.w, b.y + b.h - r);
+  ctx.lineTo(b.x + b.w, b.y);
+}
+
+/* A fixed scatter in [0, 1) per drop, so every replay looks the same. */
+function scatter(i, salt) {
+  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 let anim = null;   // the running animation's frame id, so a new one can cancel it
 
-function drawHeaps(animate) {
-  const canvas = document.getElementById("heaps");
+function drawWater(animate) {
+  const canvas = document.getElementById("water");
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.clientWidth, H = canvas.clientHeight;
   canvas.width = Math.round(W * dpr);
@@ -143,74 +140,177 @@ function drawHeaps(animate) {
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const { left, right, unit } = grains();
+  const { left, right, unit } = drops();
   const nRight = right.reduce((s, r) => s + r.n, 0);
   const nAll = left + nRight;
 
-  // One grain size for both heaps, so mass looks conserved as it moves:
-  // the full collection's mound must fit in half the width.
-  const base = Math.max(1, Math.ceil(2 * Math.sqrt(nAll)));
-  const s = Math.max(1.2, Math.min((W / 2) * 0.9 / base, (H * 0.9) / (base / 2 + 1)));
-  const ground = H - 4;
-  const lx = W * 0.25, rx = W * 0.75;
+  const css = getComputedStyle(document.documentElement);
+  const water = css.getPropertyValue("--water").trim();
+  const rim = css.getPropertyValue("--rim").trim();
+  const shine = css.getPropertyValue("--shine").trim();
 
-  // The full heap at the left, at its original base. The left heap keeps
-  // that base (it is being dug from the top); the grains that move right are
-  // the ones at the top of it.
-  const full = mound(nAll, base);
-  const leftPts = full.slice(0, left);
-  const liftPts = full.slice(left);
-  const rightPts = mound(nRight);
+  // Two identical basins, centred under their labels (a quarter and three
+  // quarters across), with headroom above for the drops' arcs. Being the same
+  // shape, the water leaving one visibly matches what lands in the other.
+  const bottom = H - 6;
+  const bw = W * 0.36, bh = H * 0.68;
+  const pool = { x: W * 0.25 - bw / 2, y: bottom - bh, w: bw, h: bh };
+  const ves = { x: W * 0.75 - bw / 2, y: bottom - bh, w: bw, h: bh };
 
-  const soil = getComputedStyle(document.documentElement).getPropertyValue("--soil").trim();
+  // Area per drop: either basin can hold the whole collection.
+  const a = nAll ? 0.92 * bw * bh / nAll : 0;
+  // A layer with anything in it is at least 2px deep, so it can be seen.
+  const depth = (n, box) => (n > 0 ? Math.max(2, n * a / box.w) : 0);
+  const r = Math.max(1.6, Math.min(4.5, Math.sqrt(a) * 0.5));
+
   const rightStyle = [];
   for (const seg of right) for (let i = 0; i < seg.n; i++) rightStyle.push(seg);
 
-  const toXY = (cx, [gx, gy]) => [cx + gx * s, ground - (gy + 1) * s];
+  // Timeline, in t-units (one is 2.2s): drop i leaves the pool at launch(i),
+  // the bottom layer's drops first, so the vessel fills from below. How long
+  // each is in the air comes from the physics below; a landing's ring lasts
+  // SPLASH.
+  const SPREAD = 0.62, SPLASH = 0.07;
+  const launch = (i) => (nRight > 1 ? (i / (nRight - 1)) * SPREAD : 0);
+
+  /* The vessel's surface once `landed` drops are in, layer by layer. */
+  function vesselTop(landed) {
+    let y = ves.y + ves.h, start = 0;
+    for (const seg of right) {
+      y -= depth(Math.max(0, Math.min(seg.n, landed - start)), ves);
+      start += seg.n;
+    }
+    return y;
+  }
+
+  /* Each drop's flight is a plain parabola, like a thrown stone: steady speed
+     across, rising and falling under one gravity G shared by every drop (px
+     per t-unit², scaled to the canvas). Its apex is the lowest that clears
+     both inner rims. Drops leave from the outer part of the pool and land at
+     the mirror-image spot in the vessel, as far from its inner wall as they
+     started from the pool's. A lopsided pairing (or a spot next to an inner
+     wall) could leave no arc that clears both rims and stays on the canvas
+     when the water is low. */
+  const G = 34 * H;
+  const rimClear = pool.y - r - 3;
+  const posAt = (p, tau) => [p.x0 + p.vx * tau, p.apex + (G / 2) * (tau - p.up) ** 2];
+  const heightAt = (p, x) => posAt(p, (x - p.x0) / p.vx)[1];
+  const paths = [];
+  for (let i = 0; i < nRight; i++) {
+    const x0 = pool.x + pool.w * (0.08 + 0.52 * scatter(i, 1));
+    const x1 = W - x0;
+    const y0 = pool.y + pool.h - depth(left + nRight - i, pool);
+    const y1 = vesselTop(i + 1);
+    let p;
+    for (let apex = rimClear; ; apex -= 2) {
+      const up = Math.sqrt((2 * (y0 - apex)) / G);
+      const T = up + Math.sqrt((2 * (y1 - apex)) / G);
+      p = { x0, x1, apex, up, T, vx: (x1 - x0) / T, t0: launch(i) };
+      const clear = heightAt(p, pool.x + pool.w) <= rimClear && heightAt(p, ves.x) <= rimClear;
+      if (clear || apex <= r + 2) break;
+    }
+    paths.push(p);
+  }
+  const lastLanding = paths.reduce((m, p) => Math.max(m, p.t0 + p.T), 0);
+
+  /* Fill a basin with layers [{n, colour, alpha}], bottom first. Returns the
+     water surface's y. */
+  function fill(box, layers) {
+    ctx.save();
+    basinPath(ctx, box);
+    ctx.closePath();
+    ctx.clip();
+    let y = box.y + box.h;
+    for (const L of layers) {
+      const d = depth(L.n, box);
+      if (!d) continue;
+      ctx.globalAlpha = L.alpha;
+      ctx.fillStyle = L.colour;
+      ctx.fillRect(box.x, y - d, box.w, d);
+      y -= d;
+    }
+    ctx.restore();
+    if (y < box.y + box.h) {
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = shine;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(box.x + 1, y + 0.75);
+      ctx.lineTo(box.x + box.w - 1, y + 0.75);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = rim;
+    ctx.lineWidth = 1.5;
+    basinPath(ctx, box);
+    ctx.stroke();
+    return y;
+  }
 
   function frame(t) {
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = soil;
-    ctx.globalAlpha = 1;
-    for (const p of leftPts) {
-      const [x, y] = toXY(lx, p);
-      ctx.fillRect(x, y, s * 0.9, s * 0.9);
+
+    let departed = 0, landed = 0;
+    for (const p of paths) {
+      if (t > p.t0) departed += 1;
+      if (t >= p.t0 + p.T) landed += 1;
     }
+
+    fill(pool, [{ n: left + nRight - departed, colour: water, alpha: 1 }]);
+    const layers = [];
+    let start = 0;
+    for (const seg of right) {
+      const n = Math.max(0, Math.min(seg.n, landed - start));
+      layers.push({ n, colour: seg.colour, alpha: seg.solid ? 1 : 0.4 });
+      start += seg.n;
+    }
+    const vesTop = fill(ves, layers);
+
+    // Drops in the air, each on its parabola. Splashes: a ring spreading on
+    // the vessel's surface just after a drop lands.
     for (let i = 0; i < nRight; i++) {
-      // Each grain starts a little after the one below it, so the right heap
-      // builds from the bottom up while the left one is dug from the top down.
-      const delay = nRight > 1 ? (i / (nRight - 1)) * 0.6 : 0;
-      const k = Math.min(1, Math.max(0, (t - delay) / 0.4));
-      const e = k * k * (3 - 2 * k);   // smoothstep
-      const [x0, y0] = toXY(lx, liftPts[liftPts.length - 1 - i] || [0, 0]);
-      const [x1, y1] = toXY(rx, rightPts[i]);
-      const x = x0 + (x1 - x0) * e;
-      const y = y0 + (y1 - y0) * e - Math.sin(Math.PI * e) * H * 0.25;
+      const p = paths[i];
+      const tau = t - p.t0;
       const st = rightStyle[i];
-      ctx.fillStyle = k === 0 ? soil : st.colour;
-      ctx.globalAlpha = k === 0 || st.solid ? 1 : 0.35;
-      ctx.fillRect(x, y, s * 0.9, s * 0.9);
+      const x1 = p.x1;
+      if (tau > 0 && tau < p.T) {
+        const [x, y] = posAt(p, tau);
+        ctx.globalAlpha = st.solid ? 1 : 0.5;
+        ctx.fillStyle = st.colour;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (tau >= p.T && tau < p.T + SPLASH) {
+        const q = (tau - p.T) / SPLASH;
+        ctx.globalAlpha = (1 - q) * (st.solid ? 0.9 : 0.45);
+        ctx.strokeStyle = st.colour;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(x1, vesTop, r * (1 + 3 * q), r * (0.35 + 0.8 * q), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
   }
 
   if (anim) cancelAnimationFrame(anim);
   if (!animate || reduceMotion || nRight === 0) {
-    frame(1);
+    frame(lastLanding + 1);
   } else {
-    const start = performance.now(), dur = 1800;
+    const start = performance.now(), dur = 2200;
+    const end = lastLanding + SPLASH;
     const step = (now) => {
-      const t = Math.min(1, (now - start) / dur);
+      const t = Math.min(end, (now - start) / dur);
       frame(t);
-      anim = t < 1 ? requestAnimationFrame(step) : null;
+      anim = t < end ? requestAnimationFrame(step) : null;
     };
     anim = requestAnimationFrame(step);
   }
 
   const what = state.unit === "texts"
-    ? (unit > 1 ? `one grain ≈ ${nf.format(Math.round(unit))} texts` : "one grain = one text")
-    : `one grain ≈ ${fmtMB(unit)}`;
-  document.getElementById("grain-note").textContent =
+    ? (unit > 1 ? `one drop ≈ ${nf.format(Math.round(unit))} texts` : "one drop = one text")
+    : `one drop ≈ ${fmtMB(unit)}`;
+  document.getElementById("drop-note").textContent =
     `${what}. Solid: done at this level. Faint: in SETI, not yet done. Click to replay.`;
 }
 
@@ -278,7 +378,7 @@ function render(animate) {
   for (const b of document.querySelectorAll("#unit button")) {
     b.setAttribute("aria-pressed", String(b.dataset.unit === state.unit));
   }
-  drawHeaps(animate);
+  drawWater(animate);
   drawBars();
 }
 
@@ -337,8 +437,8 @@ async function main() {
     const u = e.target.dataset && e.target.dataset.unit;
     if (u) { state.unit = u; render(true); }
   });
-  document.getElementById("heaps").addEventListener("click", () => drawHeaps(true));
-  window.addEventListener("resize", () => drawHeaps(false));
+  document.getElementById("water").addEventListener("click", () => drawWater(true));
+  window.addEventListener("resize", () => drawWater(false));
   dark.addEventListener("change", () => render(false));
 
   render(true);

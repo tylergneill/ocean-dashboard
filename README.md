@@ -75,7 +75,7 @@ decides which of those are solid and which are faint:
   for Wikisource, Sanskrit Documents and E-bhāratīsampat. GRETIL and Jain eLibrary
   use the colours from Sāgarasaṅgama's unmerged
   `add-gretil-and-jain-2` branch until its main carries them.
-- Two heaps of grains: not yet in SETI on the left, in SETI on the right.
-  On load the registered grains lift off the left heap and arc across.
-  Click the heaps to replay.
+- A pool and a vessel: not yet in SETI on the left, in SETI on the right.
+  On load the registered share is drawn up out of the pool as drops that arc
+  across and fill the vessel, a layer per collection. Click to replay.
 - Bars underneath give exact counts and MB.

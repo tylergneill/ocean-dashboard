@@ -1,6 +1,8 @@
 /* Surface colours copied from Sāgarasaṅgama's docs/styles.css (light and
-   dark), so the two pages feel related. --soil is this page's own: the colour
-   of the unregistered heap, deliberately not a collection colour. */
+   dark), so the two pages feel related. --water, --rim and --shine are this
+   page's own: the unregistered pool, the basins' outlines and the glint on a
+   water surface. --water is a grey-blue, kept well clear of Sanskrit
+   Wikisource's saturated blue so the pool never reads as a collection. */
 :root {
   --bg: #ffffff;
   --panel: #f4f6f8;
@@ -8,7 +10,9 @@
   --muted: #55606e;
   --border: #d7dde3;
   --accent: #8a6414;
-  --soil: #b8ad9a;
+  --water: #a9bccb;
+  --rim: #8f9eab;
+  --shine: rgba(255, 255, 255, 0.55);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -19,7 +23,9 @@
     --muted: #a8b3c2;
     --border: #222b36;
     --accent: #C89B3C;
-    --soil: #5c5547;
+    --water: #3b4b59;
+    --rim: #56677a;
+    --shine: rgba(255, 255, 255, 0.18);
     color-scheme: dark;
   }
 }
@@ -59,16 +65,16 @@ h1 { margin: 0 0 4px; font-size: 1.5rem; }
 .seg button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .field { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-#heaps { display: block; width: 100%; height: 280px; cursor: pointer; }
-.heap-labels { display: flex; justify-content: space-around; color: var(--muted); font-size: 0.85rem; }
-.grain-note { margin: 6px 0 0; text-align: center; color: var(--muted); font-size: 0.8rem; }
+#water { display: block; width: 100%; height: 280px; cursor: pointer; }
+.field-labels { display: flex; justify-content: space-around; color: var(--muted); font-size: 0.85rem; }
+.drop-note { margin: 6px 0 0; text-align: center; color: var(--muted); font-size: 0.8rem; }
 
 /* Progress bars. Three segments: done (solid collection colour), recorded
-   but not done at the chosen level (hatched), and not in SETI (soil). */
+   but not done at the chosen level (hatched), and not in SETI (water). */
 .bars { margin-top: 20px; display: grid; gap: 14px; }
 .bar-row h3 { margin: 0 0 4px; font-size: 0.95rem; font-weight: 600; }
 .bar-row h3 .nums { font-weight: 400; color: var(--muted); }
-.bar { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: var(--soil); }
+.bar { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: var(--water); }
 .bar .done { background: var(--c); }
 .bar .partial {
   background: repeating-linear-gradient(135deg, var(--c) 0 3px, transparent 3px 7px);
@@ -79,5 +85,5 @@ footer { margin-top: 28px; font-size: 0.8rem; color: var(--muted); }
 footer code { font-size: 0.78rem; }
 
 @media (max-width: 560px) {
-  #heaps { height: 200px; }
+  #water { height: 200px; }
 }
