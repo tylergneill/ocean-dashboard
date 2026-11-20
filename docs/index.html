@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ocean registration progress</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Sāgarasaṅgama → SETI</h1>
+    <p class="sub">How much of each collection has been registered in SETI. The pool on the left is
+      still waiting; the vessel on the right holds everything with a SETI record.</p>
+  </header>
+
+  <nav id="tabs" class="tabs" role="tablist"></nav>
+
+  <section class="controls">
+    <div class="seg" id="level" role="radiogroup" aria-label="What counts as done">
+      <span class="seg-label">Done means</span>
+      <button data-level="record" aria-pressed="true">Record</button>
+      <button data-level="work">+ Work</button>
+      <button data-level="author">+ Author</button>
+      <button data-level="both">+ Work &amp; author</button>
+      <button disabled title="Not in the SETI master yet">Author detail</button>
+    </div>
+    <div class="seg" id="unit" role="radiogroup" aria-label="Measure">
+      <span class="seg-label">Measure</span>
+      <button data-unit="texts" aria-pressed="true">Texts</button>
+      <button data-unit="bytes">MB</button>
+    </div>
+  </section>
+
+  <section class="field">
+    <canvas id="water" aria-label="Water drawn from a pool on the left, not yet registered, into a vessel on the right, registered"></canvas>
+    <div class="field-labels">
+      <span>Not yet in SETI</span>
+      <span>In SETI</span>
+    </div>
+    <p class="drop-note" id="drop-note"></p>
+  </section>
+
+  <section id="bars" class="bars"></section>
+
+  <footer id="footer"></footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
