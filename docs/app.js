@@ -402,7 +402,22 @@ function buildTabs() {
   for (const c of state.data.collections) tab(c.code, c.name, colourOf(c));
 }
 
-function footer() {
+/* The code version from docs/VERSION: `__key__ = "value"` lines, as in
+   Sāgarasaṅgama and the Atlases. Only __code_version__ is kept here; the
+   data's date is the build stamp in progress.json, shown in the footer.
+   Missing or unreadable, the footer just leaves the version out. */
+async function codeVersion() {
+  try {
+    const res = await fetch("./VERSION");
+    if (!res.ok) return null;
+    const m = (await res.text()).match(/__code_version__\s*=\s*"([^"]*)"/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function footer(version) {
   const d = state.data;
   const unmatched = Object.entries(d.seti_rows_unmatched || {})
     .filter(([, n]) => n > 0)
@@ -413,6 +428,7 @@ function footer() {
     .map(([name, n]) => `${nf.format(n)} more link only a ${name} version file, which doesn't count.`)
     .join(" ");
   document.getElementById("footer").innerHTML =
+    (version ? `ocean-dashboard v${version}. ` : "") +
     `Built ${d.generated.slice(0, 10)} from the search index of ` +
     `${(d.inputs.search_json.generated || "?").slice(0, 10)} and ` +
     `${nf.format(d.inputs.seti_master.rows)} SETI rows. ${unmatched} ${versionOnly}`;
@@ -427,7 +443,7 @@ async function main() {
   }
   state.data = await res.json();
   buildTabs();
-  footer();
+  footer(await codeVersion());
 
   document.getElementById("level").addEventListener("click", (e) => {
     const lv = e.target.dataset && e.target.dataset.level;
