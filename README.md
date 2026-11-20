@@ -1,4 +1,4 @@
-# ocean-registration-progress-dashboard
+# ocean-dashboard
 
 A small local dashboard of how far the Sāgarasaṅgama collections have got
 into SETI, one collection at a time.
